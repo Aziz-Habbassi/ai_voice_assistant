@@ -1,11 +1,13 @@
 import speech_recognition as sr
 import pyttsx3
+import streamlit as st
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.prompts import PromptTemplate
 from langchain_ollama import OllamaLLM
 
 llm=OllamaLLM(model="llama3.1:8b")
-chat_history=ChatMessageHistory()
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history=ChatMessageHistory()
 
 
 recognizer=sr.Recognizer()
@@ -21,15 +23,15 @@ def speak(text):
 
 def listen():
     with sr.Microphone() as source:
-        print("\nListening...")
+        st.write("\nListening...")
         recognizer.adjust_for_ambient_noise(source=source)
         audio=recognizer.listen(source=source)
     try:
         query=recognizer.recognize_google(audio_data=audio)
-        print(f"\nYou said : {query}")
+        st.write(f"\nYou said : {query}")
         return query.lower()
     except sr.UnknownValueError:
-        print("Sorry, I couldn't Understant. try again !")
+        st.write("Sorry, I couldn't Understant. try again !")
         return ""
     except sr.RequestError:
         print("Speech Recognize Service Unavalible for now")
@@ -38,24 +40,26 @@ def listen():
 prompt=PromptTemplate(input_variables=["chat_history","question"],template="Previous conversation: {chat_history}\nUser: {question}\nAI:")
 
 def run_chain(question):
-    chat_history_text="\n".join([f"{msg.type.capitalize()} : {msg.content}"for msg in chat_history.messages])
+    chat_history_text="\n".join([f"{msg.type.capitalize()} : {msg.content}"for msg in st.session_state.chat_history.messages])
     response=llm.invoke(prompt.format(chat_history=chat_history_text,question=question))
 
-    chat_history.add_user_message(question)
-    chat_history.add_ai_message(response)
+    st.session_state.chat_history.add_user_message(question)
+    st.session_state.chat_history.add_ai_message(response)
 
     return response
 
-speak("Hi! I am your Ai assistant. How can I help you today ?")
-while True:
+st.title("🤖Hi! I am your Ai assistant. How can I help you today ?")
+if st.button("Start Listening..."):
     query=listen()
     if "exit" in query or "stop" in query:
-        print("\nAi: Have a good Day, GoodBye !")
-        speak("Have a good Day, GoodBye !")
-        break
+        st.write("\nAi: Have a good Day, GoodBye !")
+        st.write("Have a good Day, GoodBye !")   
     if query :
         response=run_chain(question=query)
-        print(f"\n Ai: {response}")
+        st.write(f"\nUser: {query}")
+        st.write(f"\nAi: {response}")
         speak(response)
-    if not query:
-        continue
+
+st.subheader("📜Chat History")
+for msg in st.session_state.chat_history.messages:
+    st.write(msg.type.capitalize()+" : "+msg.content)
