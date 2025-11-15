@@ -7,15 +7,17 @@ from langchain_ollama import OllamaLLM
 llm=OllamaLLM(model="llama3.1:8b")
 chat_history=ChatMessageHistory()
 
-engine=pyttsx3.init()
-engine.setProperty("rate",160)
-voices = engine.getProperty('voices')
-engine.setProperty('voice', voices[1].id)
+
 recognizer=sr.Recognizer()
 
 def speak(text):
-    engine.say(text=text)
+    engine=pyttsx3.init()
+    engine.setProperty("rate",170)
+    voices = engine.getProperty('voices')
+    engine.setProperty('voice', voices[1].id)
+    engine.say(text)
     engine.runAndWait()
+
 
 def listen():
     with sr.Microphone() as source:
@@ -36,7 +38,7 @@ def listen():
 prompt=PromptTemplate(input_variables=["chat_history","question"],template="Previous conversation: {chat_history}\nUser: {question}\nAI:")
 
 def run_chain(question):
-    chat_history_text="\n".join([f"{msg.type.capitalize()} : {msg.content}"for msg in chat_history])
+    chat_history_text="\n".join([f"{msg.type.capitalize()} : {msg.content}"for msg in chat_history.messages])
     response=llm.invoke(prompt.format(chat_history=chat_history_text,question=question))
 
     chat_history.add_user_message(question)
@@ -48,6 +50,7 @@ speak("Hi! I am your Ai assistant. How can I help you today ?")
 while True:
     query=listen()
     if "exit" in query or "stop" in query:
+        print("\nAi: Have a good Day, GoodBye !")
         speak("Have a good Day, GoodBye !")
         break
     if query :
