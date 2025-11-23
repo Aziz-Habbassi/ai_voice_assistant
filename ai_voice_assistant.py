@@ -1,5 +1,8 @@
 import speech_recognition as sr
 import pyttsx3
+from gtts import gTTS
+from playsound import playsound
+import tempfile
 import streamlit as st
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.prompts import PromptTemplate
@@ -11,21 +14,31 @@ if "chat_history" not in st.session_state:
 
 
 recognizer=sr.Recognizer()
-
+#You can chose eather pyttsx3 or gtts for speaking
+# def speak(text):
+#     engine=pyttsx3.init()
+#     engine.setProperty("rate",170)
+#     voices = engine.getProperty('voices')
+#     engine.setProperty('voice', voices[1].id)
+#     engine.say(text)
+#     engine.runAndWait()
 def speak(text):
-    engine=pyttsx3.init()
-    engine.setProperty("rate",170)
-    voices = engine.getProperty('voices')
-    engine.setProperty('voice', voices[1].id)
-    engine.say(text)
-    engine.runAndWait()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+        filename = fp.name
+    # Generate speech
+    tts = gTTS(text=text, lang="en")
+    tts.save(filename)
 
+    # Play automatically
+    playsound(filename)
 
-def listen():
+def listen(listen_placeholder):
+    
     with sr.Microphone() as source:
-        st.write("\nListening...")
+        listen_placeholder.write("\nListening...")
         recognizer.adjust_for_ambient_noise(source=source)
         audio=recognizer.listen(source=source)
+    listen_placeholder.empty()
     try:
         query=recognizer.recognize_google(audio_data=audio)
         st.write(f"\nYou said : {query}")
@@ -47,10 +60,10 @@ def run_chain(question):
     st.session_state.chat_history.add_ai_message(response)
 
     return response
-
+listen_placeholder = st.empty()
 st.title("🤖Hi! I am your Ai assistant. How can I help you today ?")
 if st.button("Start Listening..."):
-    query=listen()
+    query=listen(listen_placeholder=listen_placeholder)
     if "exit" in query or "stop" in query:
         st.write("\nAi: Have a good Day, GoodBye !")
         st.write("Have a good Day, GoodBye !")   
